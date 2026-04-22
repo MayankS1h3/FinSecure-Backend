@@ -1,11 +1,14 @@
 package com.ds.app.service.impl;
 
 import com.ds.app.dto.request.TimesheetEntryRequest;
+import com.ds.app.dto.request.WeeklyTimesheetEntryRequest;
 import com.ds.app.dto.response.TimesheetEntryResponse;
+import com.ds.app.dto.response.WeeklyTimesheetEntryResponse;
 import com.ds.app.entity.Employee;
 import com.ds.app.entity.Timesheet;
 import com.ds.app.entity.TimesheetEntry;
 import com.ds.app.enums.TimesheetStatus;
+import com.ds.app.exception.DailyHoursLimitExceededException;
 import com.ds.app.exception.InvalidTimesheetStateException;
 import com.ds.app.exception.ResourceNotFoundException;
 import com.ds.app.mapper.TimesheetEntryMapper;
@@ -18,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -71,6 +75,34 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
         return timesheetEntryMapper.mapToResponse(saved);
     }
+    
+    @Override
+	public WeeklyTimesheetEntryResponse addWeeklyEntry(WeeklyTimesheetEntryRequest request) {
+		Employee loggeInEmployee = securityUtils.getLoggedInEmployee();
+		
+		int month = request.getEntries().get(0).getDate().getMonthValue();
+		int year = request.getEntries().get(0).getDate().getYear();
+		
+		Timesheet timesheet = timesheetRepository
+				.findByEmployeeUserIdAndMonthAndYear(loggeInEmployee.getUserId(), month, year)
+				.orElseGet( () -> timesheetRepository.save(
+						Timesheet.builder()
+						.employee(loggeInEmployee)
+						.month(month)
+						.year(year)
+						.status(TimesheetStatus.DRAFT)
+						.totalMonthlyMinutes(0)
+						.build()
+						));
+		
+        ensureEditableAndResetIfRejected(timesheet);
+
+        List<TimesheetEntry> entries = timesheetEntryMapper.mapToEntityList(request, timesheet);
+        
+        validateDailyHours(entries);
+        
+        List<TimesheetEntry> savedEntries = entryRepository.saveAll(entries);
+	}
 
     @Override
     public List<TimesheetEntryResponse> getMyEntries(Integer month, Integer year) {
@@ -178,6 +210,45 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
         log.info("Timesheet entry deleted. employeeId={}, timesheetId={}, entryId={}",
                 me.getUserId(), timesheet.getTimesheetId(), entryId);
+    }
+    
+    private void validateDailyHours(List<TimesheetEntry> entries) {
+    	entries.forEach(entry -> {
+    		if(entry.getTotalMinutesWorked() > 540) {
+    			throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
+    		}
+    	});
+    }
+    
+    private void validateDateRange(WeeklyTimesheetEntryRequest request) {
+    	int month = request.getEntries().get(0).getDate().getMonthValue();
+    	int year = request.getEntries().get(0).getDate().getYear();
+    	
+    	YearMonth ym = YearMonth.of(year, month);
+    	int totalDaysInMonth = ym.lengthOfMonth();
+    	
+    	int weekNumber = request.getWeekNumber();
+    	
+    	LocalDate firstSunday = LocalDate.of(year, month, 1);
+    	
+    	while(firstSunday.getDayOfWeek() != DayOfWeek.SUNDAY) {
+    		firstSunday.plusDays(1);
+    	}
+    	
+    	LocalDate weekStartDate;
+    	LocalDate weekEndDate;
+    	
+    	if(request.getWeekNumber() == 0) {
+    		weekStartDate = LocalDate.of(year, month, 1);
+    		weekEndDate = firstSunday;
+    	}else {
+    		int datesToAddInStartDate = firstSunday.getDayOfMonth() + 7 * (weekNumber - 1);
+    		weekStartDate = LocalDate.of(year, month, 1 + datesToAddInStartDate);
+    		
+    		int datesToAddInEndDate = ( firstSunday.getDayOfMonth() + 7 * weekNumber ) > totalDaysInMonth : ;
+    		
+    		weekEndDate = Local
+    	}
     }
 
     private void ensureEditableAndResetIfRejected(Timesheet timesheet) {
