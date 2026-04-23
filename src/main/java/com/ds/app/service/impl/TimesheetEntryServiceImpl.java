@@ -9,6 +9,7 @@ import com.ds.app.entity.Timesheet;
 import com.ds.app.entity.TimesheetEntry;
 import com.ds.app.enums.TimesheetStatus;
 import com.ds.app.exception.DailyHoursLimitExceededException;
+import com.ds.app.exception.InvalidDateForTheWeek;
 import com.ds.app.exception.InvalidTimesheetStateException;
 import com.ds.app.exception.ResourceNotFoundException;
 import com.ds.app.mapper.TimesheetEntryMapper;
@@ -79,6 +80,8 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
     @Override
 	public WeeklyTimesheetEntryResponse addWeeklyEntry(WeeklyTimesheetEntryRequest request) {
 		Employee loggeInEmployee = securityUtils.getLoggedInEmployee();
+
+        validateWeeklyDateRange(request);
 		
 		int month = request.getEntries().get(0).getDate().getMonthValue();
 		int year = request.getEntries().get(0).getDate().getYear();
@@ -102,6 +105,11 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
         validateDailyHours(entries);
         
         List<TimesheetEntry> savedEntries = entryRepository.saveAll(entries);
+
+        recalculateTotalHours(timesheet);
+
+        return timesheetEntryMapper
+                .mapToWeeklyResponse(savedEntries);
 	}
 
     @Override
@@ -220,35 +228,42 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
     	});
     }
     
-    private void validateDateRange(WeeklyTimesheetEntryRequest request) {
+    private void validateWeeklyDateRange(WeeklyTimesheetEntryRequest request) {
     	int month = request.getEntries().get(0).getDate().getMonthValue();
     	int year = request.getEntries().get(0).getDate().getYear();
-    	
-    	YearMonth ym = YearMonth.of(year, month);
-    	int totalDaysInMonth = ym.lengthOfMonth();
-    	
-    	int weekNumber = request.getWeekNumber();
-    	
-    	LocalDate firstSunday = LocalDate.of(year, month, 1);
-    	
-    	while(firstSunday.getDayOfWeek() != DayOfWeek.SUNDAY) {
-    		firstSunday.plusDays(1);
-    	}
-    	
-    	LocalDate weekStartDate;
-    	LocalDate weekEndDate;
-    	
-    	if(request.getWeekNumber() == 0) {
-    		weekStartDate = LocalDate.of(year, month, 1);
-    		weekEndDate = firstSunday;
-    	}else {
-    		int datesToAddInStartDate = firstSunday.getDayOfMonth() + 7 * (weekNumber - 1);
-    		weekStartDate = LocalDate.of(year, month, 1 + datesToAddInStartDate);
-    		
-    		int datesToAddInEndDate = ( firstSunday.getDayOfMonth() + 7 * weekNumber ) > totalDaysInMonth : ;
-    		
-    		weekEndDate = Local
-    	}
+        int weekNumber = request.getWeekNumber();
+
+        LocalDate startOfMonth = LocalDate.of(year, month, 1);
+        int totalDaysInMonth = YearMonth.of(year, month).lengthOfMonth();
+        LocalDate endOfMonth = LocalDate.of(year, month, totalDaysInMonth);
+
+        int firstSundayDiffFromStartOfMonth = 7 - startOfMonth.getDayOfWeek().getValue();
+        LocalDate firstSunday = LocalDate.of(year, month, firstSundayDiffFromStartOfMonth);
+
+        LocalDate startOfWeek;
+        LocalDate endOfWeek;
+
+        if(weekNumber == 0) {
+            startOfWeek = startOfMonth;
+            endOfWeek = firstSunday;
+        }else {
+            startOfWeek = firstSunday.plusDays(1 + 7L * (weekNumber - 1));
+            endOfWeek = startOfWeek.plusDays(6);
+
+            if(endOfWeek.isAfter(endOfMonth)) {
+                endOfWeek = endOfMonth;
+            }
+        }
+
+        final LocalDate finalStartOfWeek = startOfWeek;
+        final LocalDate finalEndOfWeek = endOfWeek;
+
+        request.getEntries()
+                .forEach(entry -> {
+                    if(entry.getDate().isBefore(finalStartOfWeek) || entry.getDate().isAfter(finalEndOfWeek)) {
+                        throw new InvalidDateForTheWeek("Invalid date for this week number");
+                    }
+                });
     }
 
     private void ensureEditableAndResetIfRejected(Timesheet timesheet) {

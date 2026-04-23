@@ -1,7 +1,9 @@
 package com.ds.app.controller;
 
 import com.ds.app.dto.request.TimesheetEntryRequest;
+import com.ds.app.dto.request.WeeklyTimesheetEntryRequest;
 import com.ds.app.dto.response.TimesheetEntryResponse;
+import com.ds.app.dto.response.WeeklyTimesheetEntryResponse;
 import com.ds.app.service.ITimesheetEntryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,10 +23,17 @@ public class TimesheetEntryController {
 
     private final ITimesheetEntryService timesheetEntryService;
 
-    @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
+    @PreAuthorize("hasAuthority('EMPLOYEE')")
     @PostMapping
     public ResponseEntity<TimesheetEntryResponse> addMyEntry(@Valid @RequestBody TimesheetEntryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(timesheetEntryService.addMyEntry(request));
+    }
+
+    @PreAuthorize("hasAnyAuthority('EMPLOYEE')")
+    @PostMapping("/weekly-entry")
+    public ResponseEntity<WeeklyTimesheetEntryResponse> addWeeklyEntry(@Valid @RequestBody WeeklyTimesheetEntryRequest request) {
+        WeeklyTimesheetEntryResponse response = timesheetEntryService.addWeeklyEntry(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
