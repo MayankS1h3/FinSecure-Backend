@@ -14,35 +14,31 @@ import java.util.Optional;
 @Repository
 public interface ITimesheetEntryRepository extends JpaRepository<TimesheetEntry, Long> {
 
-    List<TimesheetEntry> findByTimesheetEmployeeUserIdAndDateBetweenOrderByDateAsc(
-            Long employeeId, LocalDate startDate, LocalDate endDate
-    );
+	List<TimesheetEntry> findByTimesheetEmployeeUserIdAndDateBetweenOrderByDateAsc(Long employeeId, LocalDate startDate,
+			LocalDate endDate);
 
-    Optional<TimesheetEntry> findByTimesheetEntryIdAndTimesheetEmployeeUserId(
-            Long entryId, Long employeeId
-    );
+	Optional<TimesheetEntry> findByTimesheetEntryIdAndTimesheetEmployeeUserId(Long entryId, Long employeeId);
 
-    List<TimesheetEntry> findByTimesheetTimesheetIdOrderByDateAsc(Long timesheetId);
-    
-    @Query("""
-    select new com.ds.app.dto.response.EmployeeProjectHoursRow(
-        e.userId,
-        concat(e.firstName, ' ', e.lastName),
-        coalesce(sum(te.totalMinutesWorked), 0) / 60.0
-    )
-    from TimesheetEntry te
-    join te.timesheet t
-    join t.employee e
-    where e.manager.userId = :managerId
-      and te.projectId = :projectId
-      and month(te.date) = :month
-      and year(te.date) = :year
-    group by e.userId, e.firstName, e.lastName
-""")
-List<EmployeeProjectHoursRow> findEmployeeWiseProjectHoursForManager(
-        @Param("month") Integer month,
-        @Param("year") Integer year,
-        @Param("projectId") Long projectId,
-        @Param("managerId") Long managerId
-);
+	List<TimesheetEntry> findByTimesheetTimesheetIdOrderByDateAsc(Long timesheetId);
+
+	@Query("""
+			    select new com.ds.app.dto.response.EmployeeProjectHoursRow(
+			        e.userId,
+			        concat(e.firstName, ' ', e.lastName),
+			        coalesce(sum(te.totalMinutesWorked), 0) / 60.0
+			    )
+			    from TimesheetEntry te
+			    join te.timesheet t
+			    join t.employee e
+			    where e.manager.userId = :managerId
+			      and te.projectId = :projectId
+			      and month(te.date) = :month
+			      and year(te.date) = :year
+			    group by e.userId, e.firstName, e.lastName
+			""")
+	List<EmployeeProjectHoursRow> findEmployeeWiseProjectHoursForManager(@Param("month") Integer month,
+			@Param("year") Integer year, @Param("projectId") Long projectId, @Param("managerId") Long managerId);
+	
+	List<TimesheetEntry> findByTimesheet_TimesheetIdAndDate(Long timesheetId, LocalDate date);
+
 }

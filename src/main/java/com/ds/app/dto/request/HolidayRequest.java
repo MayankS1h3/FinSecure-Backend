@@ -1,7 +1,6 @@
 package com.ds.app.dto.request;
 
 import com.ds.app.enums.HolidayType;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

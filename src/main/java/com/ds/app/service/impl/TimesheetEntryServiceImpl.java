@@ -22,10 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -102,7 +104,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
         List<TimesheetEntry> entries = timesheetEntryMapper.mapToEntityList(request, timesheet);
         
-        validateDailyHours(entries);
+        validateDailyHours(entries, timesheet);
         
         List<TimesheetEntry> savedEntries = entryRepository.saveAll(entries);
 
@@ -220,50 +222,60 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
                 me.getUserId(), timesheet.getTimesheetId(), entryId);
     }
     
-    private void validateDailyHours(List<TimesheetEntry> entries) {
-    	entries.forEach(entry -> {
-    		if(entry.getTotalMinutesWorked() > 540) {
-    			throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
-    		}
-    	});
+    private void validateDailyHours(List<TimesheetEntry> entries, Timesheet timesheet) {
+    	Map<LocalDate, Integer> totalMinutesWorkedByDate = entries.stream()
+    														.collect(Collectors.groupingBy(entry -> entry.getDate(),
+    														Collectors.summingInt(entry -> entry.getTotalMinutesWorked())));
+   
+    	for (Map.Entry<LocalDate, Integer> mapEntry : totalMinutesWorkedByDate.entrySet()) {
+			int existingMinutes = entryRepository.findByTimesheet_TimesheetIdAndDate(timesheet.getTimesheetId(), mapEntry.getKey())
+					.stream()
+					.map(entry -> entry.getTotalMinutesWorked())
+					.reduce(0, (a,b) -> a+b);
+			
+			if(existingMinutes + mapEntry.getValue() > 540) {
+				throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
+			}
+		}
     }
     
     private void validateWeeklyDateRange(WeeklyTimesheetEntryRequest request) {
-    	int month = request.getEntries().get(0).getDate().getMonthValue();
-    	int year = request.getEntries().get(0).getDate().getYear();
+      
+        LocalDate firstEntryDate = request.getEntries().get(0).getDate();
+        int month = firstEntryDate.getMonthValue();
+        int year = firstEntryDate.getYear();
         int weekNumber = request.getWeekNumber();
 
         LocalDate startOfMonth = LocalDate.of(year, month, 1);
-        int totalDaysInMonth = YearMonth.of(year, month).lengthOfMonth();
-        LocalDate endOfMonth = LocalDate.of(year, month, totalDaysInMonth);
+        LocalDate endOfMonth = YearMonth.of(year, month).atEndOfMonth();
 
-        int firstSundayDiffFromStartOfMonth = 7 - startOfMonth.getDayOfWeek().getValue();
-        LocalDate firstSunday = LocalDate.of(year, month, firstSundayDiffFromStartOfMonth);
+        int firstSundayDiffFromStart = (7 - startOfMonth.getDayOfWeek().getValue()) % 7;
+        LocalDate firstSunday = startOfMonth.plusDays(firstSundayDiffFromStart);
 
         LocalDate startOfWeek;
         LocalDate endOfWeek;
 
-        if(weekNumber == 0) {
+        if (weekNumber == 0) {
             startOfWeek = startOfMonth;
             endOfWeek = firstSunday;
-        }else {
-            startOfWeek = firstSunday.plusDays(1 + 7L * (weekNumber - 1));
+        } else {
+            startOfWeek = firstSunday.plusDays(1 + 7 * (weekNumber - 1));
             endOfWeek = startOfWeek.plusDays(6);
 
-            if(endOfWeek.isAfter(endOfMonth)) {
+            if (endOfWeek.isAfter(endOfMonth)) {
                 endOfWeek = endOfMonth;
             }
         }
 
-        final LocalDate finalStartOfWeek = startOfWeek;
-        final LocalDate finalEndOfWeek = endOfWeek;
+        for (TimesheetEntryRequest entry : request.getEntries()) {
+            LocalDate date = entry.getDate();
 
-        request.getEntries()
-                .forEach(entry -> {
-                    if(entry.getDate().isBefore(finalStartOfWeek) || entry.getDate().isAfter(finalEndOfWeek)) {
-                        throw new InvalidDateForTheWeek("Invalid date for this week number");
-                    }
-                });
+            if (date.isBefore(startOfWeek) || date.isAfter(endOfWeek)) {
+                throw new InvalidDateForTheWeek(
+                    "Invalid date for this week number. Allowed range: " + startOfWeek + " to " + endOfWeek
+                );
+            }
+        }
     }
 
     private void ensureEditableAndResetIfRejected(Timesheet timesheet) {
