@@ -116,6 +116,34 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(DailyHoursLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleDailyHoursLimitExceeded(
+            DailyHoursLimitExceededException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "DAILY_HOURS_EXCEEDED",
+                null,
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(InvalidDateForTheWeek.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDateForTheWeek(
+            InvalidDateForTheWeek ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "INVALID_DATE_FOR_THE_WEEK",
+                null,
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(
             MethodArgumentNotValidException ex,

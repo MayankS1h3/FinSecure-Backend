@@ -69,6 +69,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
         ensureEditableAndResetIfRejected(timesheet);
 
         TimesheetEntry entry = timesheetEntryMapper.mapToEntity(request, timesheet);
+        validateDailyHours(List.of(entry),timesheet);
         TimesheetEntry saved = entryRepository.save(entry);
 
         recalculateTotalHours(timesheet);
@@ -190,6 +191,8 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
         existing.setProjectId(request.getProjectId());
         existing.setProjectName(request.getProjectName());
 
+        validateDailyHours(List.of(existing), timesheet);
+
         TimesheetEntry saved = entryRepository.save(existing);
         recalculateTotalHours(timesheet);
 
@@ -224,20 +227,43 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
     }
     
     private void validateDailyHours(List<TimesheetEntry> entries, Timesheet timesheet) {
-    	Map<LocalDate, Integer> totalMinutesWorkedByDate = entries.stream()
+    	Map<LocalDate, Integer> newEntriesMinutesByDate = entries.stream()
     														.collect(Collectors.groupingBy(entry -> entry.getDate(),
     														Collectors.summingInt(entry -> entry.getTotalMinutesWorked())));
-   
-    	for (Map.Entry<LocalDate, Integer> mapEntry : totalMinutesWorkedByDate.entrySet()) {
-			int existingMinutes = entryRepository.findByTimesheet_TimesheetIdAndDate(timesheet.getTimesheetId(), mapEntry.getKey())
-					.stream()
-					.map(entry -> entry.getTotalMinutesWorked())
-					.reduce(0, (a,b) -> a+b);
-			
-			if(existingMinutes + mapEntry.getValue() > 540) {
-				throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
-			}
-		}
+
+        List<Long> entryIdsBeingProcessed = entries.stream()
+                .map(TimesheetEntry::getTimesheetEntryId)
+                .filter(id -> id != null)
+                .toList();
+
+        List<TimesheetEntry> existingEntries = entryRepository.findByTimesheet_TimesheetIdAndDateIn(timesheet.getTimesheetId(), newEntriesMinutesByDate.keySet());
+
+        Map<LocalDate, Integer> existingMinutesByDate = existingEntries.stream()
+                .filter(entry -> !entryIdsBeingProcessed.contains(entry.getTimesheetEntryId()))
+                .collect(Collectors.groupingBy(entry -> entry.getDate(),
+                        Collectors.summingInt(entry -> entry.getTotalMinutesWorked())));
+
+        for (Map.Entry<LocalDate, Integer> mapEntry : newEntriesMinutesByDate.entrySet()) {
+            LocalDate date = mapEntry.getKey();
+            int newMinutes = mapEntry.getValue();
+
+            int existingMinutes = existingMinutesByDate.getOrDefault(date,0);
+
+            if(newMinutes + existingMinutes > 540) {
+                throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
+            }
+        }
+//    	for (Map.Entry<LocalDate, Integer> mapEntry : totalMinutesWorkedByDate.entrySet()) {
+//			int existingMinutes = entryRepository.findByTimesheet_TimesheetIdAndDate(timesheet.getTimesheetId(), mapEntry.getKey())
+//					.stream()
+//					.map(entry -> entry.getTotalMinutesWorked())
+//					.reduce(0, (a,b) -> a+b);
+//
+//			if(existingMinutes + mapEntry.getValue() > 540) {
+//				throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
+//			}
+//		}
+
     }
     
     private void validateWeeklyDateRange(WeeklyTimesheetEntryRequest request) {
