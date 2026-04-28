@@ -2,6 +2,7 @@ package com.ds.app.dto.request;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -21,6 +22,8 @@ public class WeeklyTimesheetEntryRequest {
 	@Max(5)
 	Integer weekNumber;
 	
+	@NotNull
 	@Size(min = 1, message = "At least one entry is required")
+	@Valid
 	List<TimesheetEntryRequest> entries;
 }

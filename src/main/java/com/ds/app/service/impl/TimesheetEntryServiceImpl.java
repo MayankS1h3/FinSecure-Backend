@@ -80,6 +80,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
     }
     
     @Override
+    @Transactional
 	public WeeklyTimesheetEntryResponse addWeeklyEntry(WeeklyTimesheetEntryRequest request) {
 		Employee loggeInEmployee = securityUtils.getLoggedInEmployee();
 
