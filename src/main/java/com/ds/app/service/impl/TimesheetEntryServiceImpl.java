@@ -19,6 +19,8 @@ import com.ds.app.service.ITimesheetEntryService;
 import com.ds.app.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +28,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +39,9 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
     private final ITimesheetRepository timesheetRepository;
     private final TimesheetEntryMapper timesheetEntryMapper;
     private final SecurityUtils securityUtils;
+    
+    @Value("${app.MAX_HOURS_PER_DAY}")
+    private int MAX_HOURS_PER_DAY;
 
     @Override
     @Transactional
@@ -82,13 +86,13 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
     
     @Override
     @Transactional
-	public WeeklyTimesheetEntryResponse addWeeklyEntry(WeeklyTimesheetEntryRequest request) {
+	public WeeklyTimesheetEntryResponse addWeeklyEntry(WeeklyTimesheetEntryRequest weekyRequest) {
 		Employee loggeInEmployee = securityUtils.getLoggedInEmployee();
 
-        validateWeeklyDateRange(request);
+        validateWeeklyDateRange(weekyRequest);
 		
-		int month = request.getEntries().get(0).getDate().getMonthValue();
-		int year = request.getEntries().get(0).getDate().getYear();
+		int month = weekyRequest.getEntries().get(0).getDate().getMonthValue();
+		int year = weekyRequest.getEntries().get(0).getDate().getYear();
 		
 		Timesheet timesheet = timesheetRepository
 				.findByEmployeeUserIdAndMonthAndYear(loggeInEmployee.getUserId(), month, year)
@@ -104,7 +108,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 		
         ensureEditableAndResetIfRejected(timesheet);
 
-        List<TimesheetEntry> entries = timesheetEntryMapper.mapToEntityList(request, timesheet);
+        List<TimesheetEntry> entries = timesheetEntryMapper.mapToEntityList(weekyRequest, timesheet);
         
         validateDailyHours(entries, timesheet);
         
@@ -166,7 +170,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
         log.info("Update timesheet entry requested. employeeId={}, entryId={}", me.getUserId(), entryId);
 
-        TimesheetEntry existing = entryRepository.findByTimesheetEntryIdAndTimesheetEmployeeUserId(entryId, me.getUserId())
+        TimesheetEntry existing = entryRepository.findById(entryId)
                 .orElseThrow(() -> {
                     log.warn("Timesheet entry not found for update. employeeId={}, entryId={}",
                             me.getUserId(), entryId);
@@ -249,7 +253,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
             int existingMinutes = existingMinutesByDate.getOrDefault(date,0);
 
-            if(newMinutes + existingMinutes > 540) {
+            if(newMinutes + existingMinutes > MAX_HOURS_PER_DAY) {
                 throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
             }
         }

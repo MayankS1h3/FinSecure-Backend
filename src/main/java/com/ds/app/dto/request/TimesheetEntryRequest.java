@@ -23,7 +23,7 @@ public class TimesheetEntryRequest {
 
     @NotNull(message = "Hours are required")
     @Min(value = 0, message = "Hours cannot be negative")
-    @Max(value = 24, message = "Hours cannot exceed 24")
+    @Max(value = 9, message = "Hours cannot exceed 9")
     private Integer hours;
 
     @NotNull(message = "Minutes are required")
