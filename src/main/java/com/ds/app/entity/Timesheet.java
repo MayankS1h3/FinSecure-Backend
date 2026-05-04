@@ -48,8 +48,8 @@ public class Timesheet {
     @Column(nullable = false)
 	private Integer totalMonthlyMinutes = 0;
 	
-	@OneToMany(mappedBy = "timesheet", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-	private List<TimesheetEntry> timesheetEntries;
+//	@OneToMany(mappedBy = "timesheet", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+//	private List<TimesheetEntry> timesheetEntries;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "approved_by")

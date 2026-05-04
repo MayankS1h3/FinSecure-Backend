@@ -52,6 +52,9 @@ public class Employee extends AppUser{
 	private List<Timesheet> approvedTimeSheets;
 	
 	@OneToMany(mappedBy = "employee", fetch = FetchType.LAZY)
+	private List<TimesheetEntry> timesheetEntries;
+	
+	@OneToMany(mappedBy = "employee", fetch = FetchType.LAZY)
 	private List<RegularizationRequest> regularizationRequests;
 	
 	@OneToMany(mappedBy = "approvedBy", fetch = FetchType.LAZY)
