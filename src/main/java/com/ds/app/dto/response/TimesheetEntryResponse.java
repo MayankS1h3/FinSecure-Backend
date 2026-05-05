@@ -14,6 +14,7 @@ import java.time.LocalDate;
 public class TimesheetEntryResponse {
     private Long timesheetEntryId;
     private Long timesheetId;
+    private Long employeeId;
     private LocalDate date;
     private String taskDescription;
     private Integer totalMinutesWorked;

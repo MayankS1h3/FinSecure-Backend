@@ -4,6 +4,7 @@ import com.ds.app.dto.request.TimesheetEntryRequest;
 import com.ds.app.dto.request.WeeklyTimesheetEntryRequest;
 import com.ds.app.dto.response.TimesheetEntryResponse;
 import com.ds.app.dto.response.WeeklyTimesheetEntryResponse;
+import com.ds.app.entity.Employee;
 import com.ds.app.entity.Timesheet;
 import com.ds.app.entity.TimesheetEntry;
 
@@ -14,12 +15,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class TimesheetEntryMapper {
 
-    public TimesheetEntry mapToEntity(TimesheetEntryRequest request, Timesheet timesheet) {
+    public TimesheetEntry mapToEntity(TimesheetEntryRequest request, Employee employee) {
 
         int totalMinutes = (request.getHours() * 60) + request.getMinutes();
 
         return TimesheetEntry.builder()
-                .timesheet(timesheet)
+//                .timesheet(timesheet)
+        		.employee(employee)
                 .date(request.getDate())
                 .taskDescription(request.getTaskDescription())
                 .totalMinutesWorked(totalMinutes)
@@ -28,27 +30,28 @@ public class TimesheetEntryMapper {
                 .build();
     }
 
-    public TimesheetEntryResponse mapToResponse(TimesheetEntry e) {
+    public TimesheetEntryResponse mapToResponse(TimesheetEntry entry) {
 
-        int hours = e.getTotalMinutesWorked() / 60;
-        int minutes = e.getTotalMinutesWorked() % 60;
+        int hours = entry.getTotalMinutesWorked() / 60;
+        int minutes = entry.getTotalMinutesWorked() % 60;
 
         return TimesheetEntryResponse.builder()
-                .timesheetEntryId(e.getTimesheetEntryId())
-                .timesheetId(e.getTimesheet().getTimesheetId())
-                .date(e.getDate())
-                .taskDescription(e.getTaskDescription())
-                .totalMinutesWorked(e.getTotalMinutesWorked()) 
+                .timesheetEntryId(entry.getTimesheetEntryId())
+                .employeeId(entry.getEmployee().getUserId())
+//                .timesheetId(entry.getTimesheet().getTimesheetId())
+                .date(entry.getDate())
+                .taskDescription(entry.getTaskDescription())
+                .totalMinutesWorked(entry.getTotalMinutesWorked()) 
                 .formattedTime(String.format("%02d:%02d", hours, minutes)) 
-                .projectId(e.getProjectId())
-                .projectName(e.getProjectName())
+                .projectId(entry.getProjectId())
+                .projectName(entry.getProjectName())
                 .build();
     }
     
-    public List<TimesheetEntry> mapToEntityList(WeeklyTimesheetEntryRequest request, Timesheet timesheet){
+    public List<TimesheetEntry> mapToEntityList(WeeklyTimesheetEntryRequest request, Employee employee){
     	return request.getEntries()
     			.stream()
-    			.map(entry -> mapToEntity(entry, timesheet))
+    			.map(entry -> mapToEntity(entry, employee))
     			.toList();
     }
     

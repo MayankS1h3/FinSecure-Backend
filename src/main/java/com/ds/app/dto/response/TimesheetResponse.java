@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -27,5 +26,4 @@ public class TimesheetResponse {
 	private String rejectionReason;
     private Integer totalMonthlyMinutes;
     private String formattedTotalTime;
-	private List<TimesheetEntryResponse> entries;
 }

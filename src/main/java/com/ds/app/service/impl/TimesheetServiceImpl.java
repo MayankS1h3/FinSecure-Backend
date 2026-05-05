@@ -52,39 +52,39 @@ public class TimesheetServiceImpl implements ITimesheetService {
 
     @Override
     public TimesheetResponse getMyMonthlyTimesheet(Integer month, Integer year) {
-        Employee me = securityUtils.getLoggedInEmployee();
+        Employee loggedInEmployee = securityUtils.getLoggedInEmployee();
 
-        Timesheet ts = timesheetRepository.findByEmployeeUserIdAndMonthAndYear(me.getUserId(), month, year)
+        Timesheet existingTimesheet = timesheetRepository.findByEmployee_UserIdAndMonthAndYear(loggedInEmployee.getUserId(), month, year)
                 .orElseThrow(() -> new ResourceNotFoundException("Timesheet not found for month/year"));
-
-        return timesheetMapper.mapToResponse(ts);
+        
+        return timesheetMapper.mapToResponse(existingTimesheet);
     }
 
     @Override
     @Transactional
     public TimesheetResponse submitMyTimesheet(Long timesheetId) {
-        Employee me = securityUtils.getLoggedInEmployee();
+        Employee loggedInEmployee = securityUtils.getLoggedInEmployee();
 
-        Timesheet ts = timesheetRepository.findByTimesheetIdAndEmployeeUserId(timesheetId, me.getUserId())
+        Timesheet timesheet = timesheetRepository.findByTimesheetIdAndEmployeeUserId(timesheetId, loggedInEmployee.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Timesheet not found with id: " + timesheetId));
 
-        if (ts.getStatus() != TimesheetStatus.DRAFT) {
+        if (timesheet.getStatus() != TimesheetStatus.DRAFT) {
             throw new InvalidTimesheetStateException("Only DRAFT timesheet can be submitted");
         }
 
-        if (ts.getTotalMonthlyMinutes() == null || ts.getTotalMonthlyMinutes() <= 0) {
+        if (timesheet.getTotalMonthlyMinutes() == null || timesheet.getTotalMonthlyMinutes() <= 0) {
             throw new InvalidTimesheetStateException("Cannot submit an empty timesheet. Please add entries first");
         }
 
-        ts.setStatus(TimesheetStatus.SUBMITTED);
-        ts.setSubmittedAt(LocalDateTime.now());
-        ts.setApprovedBy(null);
-        ts.setApprovalDate(null);
-        ts.setRejectionReason(null);
+        timesheet.setStatus(TimesheetStatus.SUBMITTED);
+        timesheet.setSubmittedAt(LocalDateTime.now());
+        timesheet.setApprovedBy(null);
+        timesheet.setApprovalDate(null);
+        timesheet.setRejectionReason(null);
 
-        emailService.notifyManagerForTimesheetSubmission(me, ts);
+        emailService.notifyManagerForTimesheetSubmission(loggedInEmployee, timesheet);
 
-        return timesheetMapper.mapToResponse(ts);
+        return timesheetMapper.mapToResponse(timesheet);
     }
 
     @Override
@@ -152,13 +152,11 @@ public class TimesheetServiceImpl implements ITimesheetService {
         List<Attendance> attendanceList =
                 attendanceRepository.findAttendanceByEmployeeUserIdAndMonthAndYear(employeeId, month, year);
 
-        Timesheet timesheet = timesheetRepository.findByEmployeeUserIdAndMonthAndYear(employeeId, month, year)
-                .orElseThrow(() -> new ResourceNotFoundException("Timesheet not found for month/year"));
-
         Map<LocalDate, Attendance> attendanceByDate = attendanceList.stream()
                 .collect(Collectors.toMap(Attendance::getDate, a -> a, (a1, a2) -> a1));
 
-        Map<LocalDate, Double> timesheetHoursByDate = timesheet.getTimesheetEntries().stream()
+        Map<LocalDate, Double> timesheetHoursByDate = timesheetEntryRepository.findByEmployee_UserIdAndMonthAndYear(
+        		employeeId, month, year).stream()
                 .collect(Collectors.groupingBy(
                         TimesheetEntry::getDate,
                         Collectors.summingDouble(e -> e.getTotalMinutesWorked() / 60.0)

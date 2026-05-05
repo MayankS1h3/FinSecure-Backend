@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface ITimesheetRepository extends JpaRepository<Timesheet, Long> {
 
-    Optional<Timesheet> findByEmployeeUserIdAndMonthAndYear(Long employeeId, Integer month, Integer year);
+    Optional<Timesheet> findByEmployee_UserIdAndMonthAndYear(Long employeeId, Integer month, Integer year);
 
     Optional<Timesheet> findByTimesheetIdAndEmployeeUserId(Long timesheetId, Long employeeId);
 

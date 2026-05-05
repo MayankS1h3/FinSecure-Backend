@@ -3,7 +3,7 @@ package com.ds.app.scheduler;
 import com.ds.app.entity.Employee;
 import com.ds.app.entity.Leave;
 import com.ds.app.entity.LeaveBalance;
-import com.ds.app.entity.Timesheet;
+import com.ds.app.entity.TimesheetEntry;
 import com.ds.app.enums.LeaveStatus;
 import com.ds.app.enums.LeaveType;
 import com.ds.app.repository.*;
@@ -28,7 +28,7 @@ public class LeaveBalanceScheduler {
 
     private final IEmployeeRepository employeeRepository;
     private final ILeaveBalanceRepository leaveBalanceRepository;
-    private final ITimesheetRepository timesheetRepository;
+    private final ITimesheetEntryRepository timesheetEntryRepository;
     private final ILeaveRepository leaveRepository;
     private final IHolidayRepository holidayRepository;
 
@@ -125,18 +125,21 @@ public class LeaveBalanceScheduler {
         }
 
         double timesheetPaid = 0.0;
-        Timesheet ts = timesheetRepository
-                .findByEmployeeUserIdAndMonthAndYear(employee.getUserId(), month.getMonthValue(), month.getYear())
-                .orElse(null);
+//        Timesheet ts = timesheetRepository
+//                .findByEmployeeUserIdAndMonthAndYear(employee.getUserId(), month.getMonthValue(), month.getYear())
+//                .orElse(null);
+        
+        List<TimesheetEntry> entries = timesheetEntryRepository.findByEmployee_UserIdAndMonthAndYear(
+        		employee.getUserId(),
+        		month.getMonthValue(),
+        		month.getYear());
 
-        if (ts != null && ts.getTimesheetEntries() != null) {
-            timesheetPaid = ts.getTimesheetEntries().stream()
+            timesheetPaid = entries.stream()
                     .filter(e -> e.getDate() != null)
                     .filter(e -> !e.getDate().isBefore(start) && !e.getDate().isAfter(end))
                     .filter(e -> e.getTotalMinutesWorked() != null)
                     .mapToDouble(e -> e.getTotalMinutesWorked() >= 240 ? 1.0 : 0.5)
                     .sum();
-        }
 
         double total = paidDays.size() + timesheetPaid;
         return Math.min(total, month.lengthOfMonth());

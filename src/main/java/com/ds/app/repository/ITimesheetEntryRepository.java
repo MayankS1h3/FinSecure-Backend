@@ -9,18 +9,28 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @Repository
 public interface ITimesheetEntryRepository extends JpaRepository<TimesheetEntry, Long> {
 
-	List<TimesheetEntry> findByTimesheetEmployeeUserIdAndDateBetweenOrderByDateAsc(Long employeeId, LocalDate startDate,
+	List<TimesheetEntry> findByEmployee_UserIdAndDateBetweenOrderByDateAsc(Long employeeId, LocalDate startDate,
 			LocalDate endDate);
 
-	Optional<TimesheetEntry> findByTimesheetEntryIdAndTimesheetEmployeeUserId(Long entryId, Long employeeId);
+//	Optional<TimesheetEntry> findByTimesheetEntryIdAndTimesheetEmployeeUserId(Long entryId, Long employeeId);
 
-	List<TimesheetEntry> findByTimesheetTimesheetIdOrderByDateAsc(Long timesheetId);
+//	List<TimesheetEntry> findByTimesheetTimesheetIdOrderByDateAsc(Long timesheetId);
+	
+	@Query("""
+			select te
+			from TimesheetEntry te
+			join te.employee e
+			where e.userId = :employeeId
+			and Month(te.date) = :month
+			and Year(te.date) = :year
+			order by te.date asc
+			""")
+	List<TimesheetEntry> findByEmployee_UserIdAndMonthAndYear(@Param("employeeId") Long employeeId, @Param("month") Integer month, @Param("year") Integer year);
 
 	@Query("""
 			    select new com.ds.app.dto.response.EmployeeProjectHoursRow(
@@ -29,8 +39,7 @@ public interface ITimesheetEntryRepository extends JpaRepository<TimesheetEntry,
 			        coalesce(sum(te.totalMinutesWorked), 0) / 60.0
 			    )
 			    from TimesheetEntry te
-			    join te.timesheet t
-			    join t.employee e
+			    join te.employee e
 			    where e.manager.userId = :managerId
 			      and te.projectId = :projectId
 			      and month(te.date) = :month
@@ -40,6 +49,7 @@ public interface ITimesheetEntryRepository extends JpaRepository<TimesheetEntry,
 	List<EmployeeProjectHoursRow> findEmployeeWiseProjectHoursForManager(@Param("month") Integer month,
 			@Param("year") Integer year, @Param("projectId") Long projectId, @Param("managerId") Long managerId);
 	
-	List<TimesheetEntry> findByTimesheet_TimesheetIdAndDateIn(Long timesheetId, Set<LocalDate> dates);
+//	List<TimesheetEntry> findByTimesheet_TimesheetIdAndDateIn(Long timesheetId, Set<LocalDate> dates);
+	List<TimesheetEntry> findByEmployee_UserIdAndDateIn(Long employeeId, Set<LocalDate> dates);
 
 }
