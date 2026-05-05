@@ -32,6 +32,7 @@ public class DataSeeder implements CommandLineRunner {
     private final IRegularizationRequestRepository regularizationRepo;
     private final IHolidayRepository holidayRepo;
     private final ITimesheetRepository timesheetRepo;
+    private final ITimesheetEntryRepository timesheetEntryRepo;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -110,9 +111,12 @@ public class DataSeeder implements CommandLineRunner {
         List<Attendance> attendanceBatch = new ArrayList<>();
         List<Leave> leaveBatch = new ArrayList<>();
         List<RegularizationRequest> regBatch = new ArrayList<>();
+        List<TimesheetEntry> entryBatch = new ArrayList<>();
         Map<String, Timesheet> timesheetMap = new HashMap<>();
 
         List<LocalDate> holidayDates = holidayRepo.findAll().stream().map(Holiday::getDate).toList();
+        LocalDate currentWeekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate currentWeekEnd = LocalDate.now().with(DayOfWeek.SUNDAY);
 
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY || holidayDates.contains(date)) {
@@ -122,9 +126,15 @@ public class DataSeeder implements CommandLineRunner {
             for (Employee emp : employees) {
 
                 // =========================================================
+                // LEAVE CURRENT WEEK TIMESHEET ENTRIES EMPTY FOR TESTING
+                // =========================================================
+                boolean isCurrentWeek = !date.isBefore(currentWeekStart) && !date.isAfter(currentWeekEnd);
+
+                // =========================================================
                 // INJECT DISCREPANCIES SPECIFICALLY FOR APRIL 2026
                 // =========================================================
-                if (date.getMonthValue() == 4 && date.getYear() == 2026) {
+                if (date.getMonthValue() == LocalDate.now().getMonthValue()
+                        && date.getYear() == LocalDate.now().getYear()) {
                     int day = date.getDayOfMonth();
                     AttendanceStatus status;
                     int attMins = 0;
@@ -154,13 +164,17 @@ public class DataSeeder implements CommandLineRunner {
                             attMins, false));
 
                     // Save Timesheet Entry
-                    if (tsMins > 0) {
+                    if (tsMins > 0 && !isCurrentWeek) {
                         Timesheet ts = getOrCreateTimesheet(emp, date, timesheetMap);
                         TimesheetEntry entry = TimesheetEntry.builder()
-                                .timesheet(ts).date(date).taskDescription("April Testing")
-                                .totalMinutesWorked(tsMins).projectId(101L).projectName("HRMS Core")
+                                .employee(emp)
+                                .date(date)
+                                .taskDescription("April Testing")
+                                .totalMinutesWorked(tsMins)
+                                .projectId(101L)
+                                .projectName("HRMS Core")
                                 .build();
-                        ts.getTimesheetEntries().add(entry);
+                        entryBatch.add(entry);
                         ts.setTotalMonthlyMinutes(ts.getTotalMonthlyMinutes() + tsMins);
                     }
                     continue; // Skip the rest of the historical loop logic for April dates
@@ -221,14 +235,18 @@ public class DataSeeder implements CommandLineRunner {
                     }
                 }
 
-                if (isPresent) {
+                if (isPresent && !isCurrentWeek) {
                     Timesheet ts = getOrCreateTimesheet(emp, date, timesheetMap);
                     TimesheetEntry entry = TimesheetEntry.builder()
-                            .timesheet(ts).date(date).taskDescription("Routine tasks")
-                            .totalMinutesWorked(minsWorked).projectId(101L).projectName("HRMS Core")
+                            .employee(emp)
+                            .date(date)
+                            .taskDescription("Routine tasks")
+                            .totalMinutesWorked(minsWorked)
+                            .projectId(101L)
+                            .projectName("HRMS Core")
                             .build();
 
-                    ts.getTimesheetEntries().add(entry);
+                    entryBatch.add(entry);
                     ts.setTotalMonthlyMinutes(ts.getTotalMonthlyMinutes() + minsWorked);
                 }
             }
@@ -239,6 +257,7 @@ public class DataSeeder implements CommandLineRunner {
         attendanceRepo.saveAll(attendanceBatch);
         leaveRepo.saveAll(leaveBatch);
         regularizationRepo.saveAll(regBatch);
+        timesheetEntryRepo.saveAll(entryBatch);
         timesheetRepo.saveAll(timesheetMap.values());
     }
 
@@ -247,7 +266,7 @@ public class DataSeeder implements CommandLineRunner {
         if (!timesheetMap.containsKey(key)) {
             Timesheet ts = Timesheet.builder()
                     .employee(emp).year(date.getYear()).month(date.getMonthValue())
-                    .status(TimesheetStatus.DRAFT).totalMonthlyMinutes(0).timesheetEntries(new ArrayList<>()).build();
+                    .status(TimesheetStatus.DRAFT).totalMonthlyMinutes(0).build();
             timesheetMap.put(key, ts);
         }
         return timesheetMap.get(key);
