@@ -26,6 +26,7 @@ import java.util.Random;
 public class DataSeeder implements CommandLineRunner {
 
     private final IEmployeeRepository employeeRepo;
+    private final ISystemConfigurationRepository systemConfigurationRepo;
     private final IAttendanceRepository attendanceRepo;
     private final ILeaveBalanceRepository leaveBalanceRepo;
     private final ILeaveRepository leaveRepo;
@@ -38,15 +39,28 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        if (employeeRepo.count() > 0) {
+        String defaultPass = passwordEncoder.encode("123");
+        boolean demoMarkerMissing = employeeRepo.findByUsername("shruti_hr").isEmpty();
+
+        seedSystemConfigurations();
+        ensureAdminUser(defaultPass);
+
+        if (!demoMarkerMissing) {
             log.info("Database already populated. Skipping demo data seeder.");
             return;
         }
 
+        long employeeCount = employeeRepo.count();
+        if (employeeCount > 1) {
+            log.warn("Employees already exist but demo marker user is missing. Skipping demo data seeder to avoid duplicates.");
+            return;
+        }
+
         log.info("Starting demo data generation (including April Discrepancy Scenarios)...");
-        String defaultPass = passwordEncoder.encode("123");
 
         seedHolidays();
+
+        Employee admin = ensureAdminUser(defaultPass);
 
         Employee hr = createEmployee("Shruti", "Mehra", "shruti@gmail.com", "shruti_hr", defaultPass, UserRole.HR, null);
 
@@ -68,6 +82,32 @@ public class DataSeeder implements CommandLineRunner {
         leaveBalanceRepo.saveAll(employeeBalances.values());
 
         log.info("Demo data seeding complete! Test the discrepancy report for Month 4.");
+    }
+
+    private void seedSystemConfigurations() {
+        for (DefaultConfig defaultConfig : DefaultConfig.values()) {
+            if (systemConfigurationRepo.findById(defaultConfig.getKey()).isPresent()) {
+                continue;
+            }
+
+            systemConfigurationRepo.save(SystemConfiguration.builder()
+                    .configKey(defaultConfig.getKey())
+                    .configValue(defaultConfig.getDefaultValue())
+                    .build());
+        }
+    }
+
+    private Employee ensureAdminUser(String defaultPass) {
+        return employeeRepo.findByUsername("admin")
+                .orElseGet(() -> createEmployee(
+                        "System",
+                        "Admin",
+                        "admin@finsecure.com",
+                        "admin",
+                        defaultPass,
+                        UserRole.ADMIN,
+                        null
+                ));
     }
 
     private void seedHolidays() {

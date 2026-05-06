@@ -15,6 +15,7 @@ import com.ds.app.exception.ResourceNotFoundException;
 import com.ds.app.mapper.TimesheetEntryMapper;
 import com.ds.app.repository.ITimesheetEntryRepository;
 import com.ds.app.repository.ITimesheetRepository;
+import com.ds.app.service.ISystemConfigurationService;
 import com.ds.app.service.ITimesheetEntryService;
 import com.ds.app.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -39,9 +40,10 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
     private final ITimesheetRepository timesheetRepository;
     private final TimesheetEntryMapper timesheetEntryMapper;
     private final SecurityUtils securityUtils;
+    private final ISystemConfigurationService configService;
     
-    @Value("${app.MAX_HOURS_PER_DAY}")
-    private int MAX_HOURS_PER_DAY;
+//    @Value("${app.MAX_HOURS_PER_DAY}")
+//    private int MAX_HOURS_PER_DAY;
 
     @Override
     @Transactional
@@ -261,7 +263,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
             int existingMinutes = existingMinutesByDate.getOrDefault(date,0);
 
-            if(newMinutes + existingMinutes > MAX_HOURS_PER_DAY) {
+            if(newMinutes + existingMinutes > configService.getMaxHoursPerDay()) {
                 throw new DailyHoursLimitExceededException("Daily hours can not be more than 9");
             }
         }

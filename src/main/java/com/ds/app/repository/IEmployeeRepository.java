@@ -25,7 +25,7 @@ public interface IEmployeeRepository extends JpaRepository<Employee, Long>{
             SELECT l FROM Leave l 
             WHERE l.employee = e 
             AND l.status = com.ds.app.enums.LeaveStatus.APPROVED 
-            AND :targetDate BETWEEN l.startDate AND l.endDate
+            AND :date BETWEEN l.startDate AND l.endDate
         )
         """)
     List<Employee> findAbsentEmployeesByDate(@Param("date") LocalDate date);
