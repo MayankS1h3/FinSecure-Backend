@@ -64,7 +64,6 @@ public class AttendanceController {
         return ResponseEntity.ok(response);
     }
 
-    // Monthly report - self (employee/manager for own report)
     @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
     @GetMapping("/report/monthly/me")
     public ResponseEntity<MonthlyAttendanceReport> getMyMonthlyAttendanceReport(
@@ -77,7 +76,6 @@ public class AttendanceController {
         return ResponseEntity.ok(response);
     }
 
-    // Monthly report - manager for team member
     @PreAuthorize("hasAuthority('MANAGER')")
     @GetMapping("/report/monthly/{employeeId}")
     public ResponseEntity<MonthlyAttendanceReport> getEmployeeMonthlyAttendanceReport(

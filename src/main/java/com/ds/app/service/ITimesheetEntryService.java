@@ -8,10 +8,13 @@ import com.ds.app.dto.response.WeeklyTimesheetEntryResponse;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 public interface ITimesheetEntryService {
     TimesheetEntryResponse addMyEntry(TimesheetEntryRequest request);
     
-    List<TimesheetEntryResponse> getMyEntries(Integer month, Integer year);
+    Page<TimesheetEntryResponse> getMyEntries(Integer month, Integer year, Pageable pageable);
     
     List<TimesheetEntryResponse> getMyEntriesByDateRange(LocalDate startDate, LocalDate endDate);
     

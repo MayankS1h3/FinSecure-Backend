@@ -156,7 +156,7 @@ public class TimesheetServiceImpl implements ITimesheetService {
                 .collect(Collectors.toMap(Attendance::getDate, a -> a, (a1, a2) -> a1));
 
         Map<LocalDate, Double> timesheetHoursByDate = timesheetEntryRepository.findByEmployee_UserIdAndMonthAndYear(
-        		employeeId, month, year).stream()
+        		employeeId, month, year, Pageable.unpaged()).getContent().stream()
                 .collect(Collectors.groupingBy(
                         TimesheetEntry::getDate,
                         Collectors.summingDouble(e -> e.getTotalMinutesWorked() / 60.0)

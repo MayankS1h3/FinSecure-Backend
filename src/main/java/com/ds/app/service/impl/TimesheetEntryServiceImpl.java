@@ -21,7 +21,8 @@ import com.ds.app.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -123,24 +124,24 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 	}
 
     @Override
-    public List<TimesheetEntryResponse> getMyEntries(Integer month, Integer year) {
+    public Page<TimesheetEntryResponse> getMyEntries(Integer month, Integer year, Pageable pageable) {
         Employee loggedInEmployee = securityUtils.getLoggedInEmployee();
 //        YearMonth ym = YearMonth.of(year, month);
 
         log.info("Fetch my entries by month/year requested. employeeId={}, month={}, year={}",
                 loggedInEmployee.getUserId(), month, year);
 
-        List<TimesheetEntryResponse> response = entryRepository
+        Page<TimesheetEntryResponse> response = entryRepository
                 .findByEmployee_UserIdAndMonthAndYear(
                         loggedInEmployee.getUserId(),
                         month,
-                        year
-                ).stream()
-                .map(timesheetEntryMapper::mapToResponse)
-                .toList();
+                        year,
+                        pageable
+                ).map(timesheetEntryMapper::mapToResponse);
+                
 
         log.debug("Fetch my entries by month/year completed. employeeId={}, count={}",
-                loggedInEmployee.getUserId(), response.size());
+                loggedInEmployee.getUserId(), response.getSize());
 
         return response;
     }
@@ -338,7 +339,12 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
     private void recalculateTotalHours(Timesheet timesheet, Employee loggedInEmployee) {
     	
-        int total = entryRepository.findByEmployee_UserIdAndMonthAndYear(loggedInEmployee.getUserId(), timesheet.getMonth(), timesheet.getYear())
+        int total = entryRepository.findByEmployee_UserIdAndMonthAndYear(
+        		loggedInEmployee.getUserId(),
+        		timesheet.getMonth(),
+        		timesheet.getYear(),
+        		Pageable.unpaged())
+        		.getContent()
                 .stream()
                 .map(TimesheetEntry::getTotalMinutesWorked)
                 .filter(m -> m != null)

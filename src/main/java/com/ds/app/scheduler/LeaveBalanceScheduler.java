@@ -9,6 +9,8 @@ import com.ds.app.enums.LeaveType;
 import com.ds.app.repository.*;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -132,7 +134,9 @@ public class LeaveBalanceScheduler {
         List<TimesheetEntry> entries = timesheetEntryRepository.findByEmployee_UserIdAndMonthAndYear(
         		employee.getUserId(),
         		month.getMonthValue(),
-        		month.getYear());
+        		month.getYear(),
+        		Pageable.unpaged())
+        		.getContent();
 
             timesheetPaid = entries.stream()
                     .filter(e -> e.getDate() != null)

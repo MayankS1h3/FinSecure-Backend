@@ -2,6 +2,9 @@ package com.ds.app.repository;
 
 import com.ds.app.dto.response.EmployeeProjectHoursRow;
 import com.ds.app.entity.TimesheetEntry;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,7 +33,11 @@ public interface ITimesheetEntryRepository extends JpaRepository<TimesheetEntry,
 			and Year(te.date) = :year
 			order by te.date asc
 			""")
-	List<TimesheetEntry> findByEmployee_UserIdAndMonthAndYear(@Param("employeeId") Long employeeId, @Param("month") Integer month, @Param("year") Integer year);
+	Page<TimesheetEntry> findByEmployee_UserIdAndMonthAndYear(
+			@Param("employeeId") Long employeeId,
+			@Param("month") Integer month,
+			@Param("year") Integer year,
+			Pageable pageable);
 
 	@Query("""
 			    select new com.ds.app.dto.response.EmployeeProjectHoursRow(

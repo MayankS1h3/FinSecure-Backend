@@ -7,6 +7,10 @@ import com.ds.app.dto.response.WeeklyTimesheetEntryResponse;
 import com.ds.app.service.ITimesheetEntryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,11 +42,13 @@ public class TimesheetEntryController {
 
     @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
     @GetMapping
-    public ResponseEntity<List<TimesheetEntryResponse>> getMyEntries(
+    public ResponseEntity<Page<TimesheetEntryResponse>> getMyEntries(
             @RequestParam Integer month,
-            @RequestParam Integer year
+            @RequestParam Integer year,
+            @PageableDefault(size = 31, page = 0)
+            Pageable pageable
     ) {
-        return ResponseEntity.ok(timesheetEntryService.getMyEntries(month, year));
+        return ResponseEntity.ok(timesheetEntryService.getMyEntries(month, year, pageable));
     }
 
     @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
