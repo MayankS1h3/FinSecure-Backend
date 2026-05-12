@@ -24,6 +24,14 @@ public class Employee extends AppUser{
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dept_id")
+    @JsonIgnore
+    private Department department;
+    
+    @OneToMany(mappedBy = "employee", fetch = FetchType.LAZY)
+    private List<EmployeeProject> employeeProjects;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "manager_id")

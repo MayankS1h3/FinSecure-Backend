@@ -40,4 +40,5 @@ public class TimesheetEntry {
 
     @Column(nullable = false)
 	private String projectName;
+  
 }

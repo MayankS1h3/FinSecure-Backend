@@ -76,7 +76,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
         ensureEditableAndResetIfRejected(timesheet);
 
         TimesheetEntry entry = timesheetEntryMapper.mapToEntity(request, loggedInEmployee);
-        validateDailyHours(List.of(entry),loggedInEmployee);
+//        validateDailyHours(List.of(entry),loggedInEmployee);
         TimesheetEntry saved = entryRepository.save(entry);
 
         recalculateTotalHours(timesheet, loggedInEmployee);
@@ -113,7 +113,7 @@ public class TimesheetEntryServiceImpl implements ITimesheetEntryService {
 
         List<TimesheetEntry> entries = timesheetEntryMapper.mapToEntityList(weekyRequest, loggeInEmployee);
         
-        validateDailyHours(entries, loggeInEmployee);
+//        validateDailyHours(entries, loggeInEmployee);
         
         List<TimesheetEntry> savedEntries = entryRepository.saveAll(entries);
 

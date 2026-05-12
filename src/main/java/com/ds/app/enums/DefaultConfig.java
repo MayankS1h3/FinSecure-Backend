@@ -1,7 +1,5 @@
 package com.ds.app.enums;
 
-import java.util.Arrays;
-
 public enum DefaultConfig {
 
     MAX_HOURS_PER_DAY("MAX_HOURS_PER_DAY", "540");
