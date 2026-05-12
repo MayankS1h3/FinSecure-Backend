@@ -12,15 +12,15 @@ import com.ds.app.entity.Project;
 public interface IProjectRepository extends JpaRepository<Project, Long>{
 	
 	@Query("""
-			select new ProjectResponse(
-				p.projectId,
-				p.projectName
+			select new com.ds.app.dto.response.ProjectResponse(
+				ep.project.projectId,
+				ep.project.projectName
 			)
 			from EmployeeProject ep
 			where 
 			ep.employee.userId = :employeeId
 			and
-			ep.project.status = ProjectStatus.ACTIVE
+			ep.project.status = com.ds.app.enums.ProjectStatus.ACTIVE
 			""")
 	List<ProjectResponse> findByStatusAndEmployeeId(@Param("employeeId") Long employeeId);
 }

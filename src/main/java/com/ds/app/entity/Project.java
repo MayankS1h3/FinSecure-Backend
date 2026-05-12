@@ -4,16 +4,18 @@ import com.ds.app.enums.ProjectStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
  
 import java.time.LocalDate;
 import java.util.List;
- 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
+
 @Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Project {
  
     @Id
@@ -22,7 +24,9 @@ public class Project {
  
     @Column(nullable = false)
     private String projectName;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
     private ProjectStatus status = ProjectStatus.ACTIVE;   // ACTIVE / COMPLETED / ON_HOLD
     private LocalDate startDate;
     private LocalDate endDate;          // null means ongoing
@@ -38,7 +42,7 @@ public class Project {
     
     @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
     @JsonIgnore
-    private List<Employee> assignedEmployees;;
+    private List<EmployeeProject> assignedEmployees;;
  
     // convenience getters
     public Long getCompanyId()    { return company    != null ? company.getCompanyId()    : null; }
