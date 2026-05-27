@@ -1,9 +1,12 @@
 package com.ds.app.controller;
 
-import com.ds.app.dto.request.ApprovalRequest;
+import com.ds.app.dto.request.TimesheetApproveRequest;
+import com.ds.app.dto.request.TimesheetSubmitRequest;
 import com.ds.app.dto.response.AttendanceTimesheetDiscrepancyReport;
 import com.ds.app.dto.response.ProjectHoursReportResponse;
 import com.ds.app.dto.response.TimesheetResponse;
+import com.ds.app.dto.timesheet.TimesheetPreviewResponse;
+import com.ds.app.enums.ApprovalStatus;
 import com.ds.app.service.ITimesheetService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -26,7 +29,10 @@ public class TimesheetController {
 
     private final ITimesheetService timesheetService;
 
-    // Employee endpoints
+    // ==========================================
+    // EMPLOYEE ENDPOINTS
+    // ==========================================
+
     @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
     @GetMapping("/my")
     public ResponseEntity<TimesheetResponse> getMyMonthlyTimesheet(
@@ -36,13 +42,28 @@ public class TimesheetController {
         return ResponseEntity.ok(timesheetService.getMyMonthlyTimesheet(month, year));
     }
 
+    // NEW: Overtime Preview API
     @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
-    @PatchMapping("/{timesheetId}/submit")
-    public ResponseEntity<TimesheetResponse> submitMyTimesheet(@PathVariable Long timesheetId) {
-        return ResponseEntity.ok(timesheetService.submitMyTimesheet(timesheetId));
+    @GetMapping("/{timesheetId}/preview-overtime")
+    public ResponseEntity<TimesheetPreviewResponse> previewOvertime(@PathVariable Long timesheetId) {
+        return ResponseEntity.ok(timesheetService.previewOvertime(timesheetId));
     }
 
-    // Manager endpoints
+    // UPDATED: Now accepts the employee's overtime choices
+    @PreAuthorize("hasAnyAuthority('EMPLOYEE','MANAGER')")
+    @PostMapping("/{timesheetId}/submit")
+    public ResponseEntity<TimesheetResponse> submitMyTimesheet(
+            @PathVariable Long timesheetId,
+            @Valid @RequestBody(required = false) TimesheetSubmitRequest request
+    ) {
+        return ResponseEntity.ok(timesheetService.submitMyTimesheet(timesheetId, request));
+    }
+
+
+    // ==========================================
+    // MANAGER ENDPOINTS
+    // ==========================================
+
     @PreAuthorize("hasAuthority('MANAGER')")
     @GetMapping("/pending")
     public ResponseEntity<Page<TimesheetResponse>> getPendingTimesheetsForManager(
@@ -63,14 +84,29 @@ public class TimesheetController {
         return ResponseEntity.ok(timesheetService.getTeamTimesheetsByMonthYear(month, year, pageable));
     }
 
+    // UPDATED: Explicit Approve Endpoint (Runs the Overtime Engine)
     @PreAuthorize("hasAuthority('MANAGER')")
-    @PatchMapping("/{timesheetId}/decision")
-    public ResponseEntity<TimesheetResponse> reviewTimesheet(
+    @PostMapping("/{timesheetId}/approve")
+    public ResponseEntity<TimesheetResponse> approveTimesheet(
             @PathVariable Long timesheetId,
-            @Valid @RequestBody ApprovalRequest request
+            @Valid @RequestBody(required = false) TimesheetApproveRequest request
     ) {
-        return ResponseEntity.ok(timesheetService.reviewTimesheet(timesheetId, request));
+        return ResponseEntity.ok(timesheetService.reviewTimesheet(timesheetId, request, ApprovalStatus.APPROVED));
     }
+
+    // UPDATED: Explicit Reject Endpoint
+    @PreAuthorize("hasAuthority('MANAGER')")
+    @PostMapping("/{timesheetId}/reject")
+    public ResponseEntity<TimesheetResponse> rejectTimesheet(
+            @PathVariable Long timesheetId,
+            @Valid @RequestBody(required = false) TimesheetApproveRequest request
+    ) {
+        return ResponseEntity.ok(timesheetService.reviewTimesheet(timesheetId, request, ApprovalStatus.REJECTED));
+    }
+
+    // ==========================================
+    // REPORTING ENDPOINTS
+    // ==========================================
 
     @PreAuthorize("hasAuthority('MANAGER')")
     @GetMapping("/reports/discrepancy/{employeeId}")
@@ -81,16 +117,15 @@ public class TimesheetController {
     ) {
         return ResponseEntity.ok(timesheetService.getAttendanceTimesheetDiscrepancyReport(employeeId, month, year));
     }
-    
+
     @PreAuthorize("hasAuthority('MANAGER')")
     @GetMapping("/project-report")
     public ResponseEntity<ProjectHoursReportResponse> getProjectWiseReport(
-    		@RequestParam Integer month,
-    		@RequestParam Integer year,
-    		@RequestParam Long projectId
-    		) {
-    	ProjectHoursReportResponse response = timesheetService.getProjectReportByMonthAndYear(month, year, projectId);
-    	return ResponseEntity.ok(response);
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam Long projectId
+    ) {
+        ProjectHoursReportResponse response = timesheetService.getProjectReportByMonthAndYear(month, year, projectId);
+        return ResponseEntity.ok(response);
     }
 }
-

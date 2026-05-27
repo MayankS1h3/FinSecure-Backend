@@ -57,5 +57,17 @@ public class Timesheet {
 	
 	private LocalDate approvalDate;
 	private String rejectionReason;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer overtimeMinutes = 0;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer overtimeCashMinutes = 0;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer compOffEarnedMinutes = 0;
 	
 }

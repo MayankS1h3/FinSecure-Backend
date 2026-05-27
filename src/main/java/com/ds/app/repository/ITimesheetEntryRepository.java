@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -59,4 +60,5 @@ public interface ITimesheetEntryRepository extends JpaRepository<TimesheetEntry,
 //	List<TimesheetEntry> findByTimesheet_TimesheetIdAndDateIn(Long timesheetId, Set<LocalDate> dates);
 	List<TimesheetEntry> findByEmployee_UserIdAndDateIn(Long employeeId, Set<LocalDate> dates);
 
+    Optional<TimesheetEntry> findByEmployee_UserIdAndDate(Long employeeId, LocalDate date);
 }

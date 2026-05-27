@@ -56,6 +56,12 @@ public class LeaveBalanceServiceImpl implements ILeaveBalanceService {
                     throw new InsufficientLeaveBalanceException("Insufficient earned leave balance");
                 lb.setReservedEarnedLeaves(lb.getReservedEarnedLeaves() + days);
             }
+            case COMP_OFF -> {
+                int available = lb.getCompoffBalance() - lb.getReservedComoffLeaves();
+                if (available < days)
+                    throw new InsufficientLeaveBalanceException("Insufficient comp-off leave balance");
+                lb.setReservedComoffLeaves(lb.getReservedComoffLeaves() + days);
+            }
             default -> { }
         }
     }
@@ -71,6 +77,7 @@ public class LeaveBalanceServiceImpl implements ILeaveBalanceService {
             case SICK   -> lb.setReservedSickLeaves(Math.max(0, lb.getReservedSickLeaves() - days));
             case CASUAL -> lb.setReservedCasualLeaves(Math.max(0, lb.getReservedCasualLeaves() - days));
             case EARNED -> lb.setReservedEarnedLeaves(Math.max(0, lb.getReservedEarnedLeaves() - days));
+            case COMP_OFF -> lb.setReservedComoffLeaves(Math.max(0, lb.getReservedComoffLeaves() - days));
             default -> { }
         }
     }
@@ -107,6 +114,14 @@ public class LeaveBalanceServiceImpl implements ILeaveBalanceService {
                 lb.setEarnedLeaveBalance(lb.getEarnedLeaveBalance().subtract(BigDecimal.valueOf(days)));
                 lb.setEarnedLeavesConsumed(lb.getEarnedLeavesConsumed() + days);
             }
+            case COMP_OFF -> {
+                if (lb.getReservedComoffLeaves() < days)
+                    throw new InvalidLeaveStateException(
+                            "Invalid leave state: reserved comp-off leaves less than requested days");
+                lb.setReservedComoffLeaves(lb.getReservedComoffLeaves() - days);
+                lb.setCompoffBalance(lb.getCompoffBalance() - days);
+                lb.setCompoffLeavesConsumed(lb.getCompoffLeavesConsumed() + days);
+            }
             default -> { }
         }
     }
@@ -131,8 +146,22 @@ public class LeaveBalanceServiceImpl implements ILeaveBalanceService {
                 lb.setEarnedLeaveBalance(lb.getEarnedLeaveBalance().add(BigDecimal.valueOf(days)));
                 lb.setEarnedLeavesConsumed(lb.getEarnedLeavesConsumed() - days);
             }
+            case COMP_OFF -> {
+                lb.setCompoffBalance(lb.getCompoffBalance() + days);
+                lb.setCompoffLeavesConsumed(lb.getCompoffLeavesConsumed() - days);
+            }
             default -> { }
         }
+    }
+
+    @Override
+    @Transactional
+    public void depositCompOff(Long userId, int year, int earnedMinutes) {
+        LeaveBalance lb = findByEmployeeAndYear(userId, year);
+        int daysEarned = earnedMinutes / 480;
+
+        lb.setCompoffBalance(lb.getCompoffBalance() + daysEarned);
+        leaveBalanceRepository.save(lb);
     }
 
     @Override
@@ -148,7 +177,6 @@ public class LeaveBalanceServiceImpl implements ILeaveBalanceService {
     public LeaveBalanceResponse getEmployeeLeaveBalance(Long employeeId, Integer year) {
         int targetYear = (year != null) ? year : Year.now().getValue();
 
-        // verify employee exists
         employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Employee not found with id: " + employeeId));

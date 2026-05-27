@@ -41,6 +41,9 @@ public class LeaveBalance {
 	private BigDecimal earnedLeaveBalance = BigDecimal.valueOf(0);
 
     @Builder.Default
+    private Integer compoffBalance = 0;
+
+    @Builder.Default
     private Integer reservedSickLeaves = 0;
 
     @Builder.Default
@@ -50,6 +53,9 @@ public class LeaveBalance {
     private Integer reservedEarnedLeaves = 0;
 
     @Builder.Default
+    private Integer reservedComoffLeaves = 0;
+
+    @Builder.Default
     private Integer sickLeavesConsumed = 0;
 
     @Builder.Default
@@ -57,6 +63,9 @@ public class LeaveBalance {
 
     @Builder.Default
     private Integer earnedLeavesConsumed = 0;
+
+    @Builder.Default
+    private Integer compoffLeavesConsumed = 0;
 	
 	@Builder.Default
 	private BigDecimal carriedForwardEarnedDays = BigDecimal.valueOf(0);

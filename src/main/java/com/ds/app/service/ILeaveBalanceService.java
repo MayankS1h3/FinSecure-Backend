@@ -12,7 +12,7 @@ public interface ILeaveBalanceService {
     void releaseReservedLeaves(Long userId, int year, LeaveType type, int days);
     void applyApproval(Long userId, int year, LeaveType type, int days);
     void applyCancellationApproval(Long userId, int year, LeaveType type, int days);
-
+    void depositCompOff(Long userId, int year, int earnedMinutes);
     // ── read methods exposed via controller (new) ──
 
     // employee views own balance

@@ -37,6 +37,8 @@ public class Employee extends AppUser{
 	@JoinColumn(name = "manager_id")
 	@JsonIgnore
 	private Employee manager;
+
+    private Long overtimePolicyId;
 	
 	@OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
 	private List<Employee> assignedEmployees;

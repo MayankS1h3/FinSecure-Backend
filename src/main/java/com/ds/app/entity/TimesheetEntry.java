@@ -1,5 +1,6 @@
 package com.ds.app.entity;
 
+import com.ds.app.enums.CompensationMode;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,5 +41,12 @@ public class TimesheetEntry {
 
     @Column(nullable = false)
 	private String projectName;
-  
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "employee_preference")
+    private CompensationMode employeePreference;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "manager_override")
+    private CompensationMode managerOverride;
 }
