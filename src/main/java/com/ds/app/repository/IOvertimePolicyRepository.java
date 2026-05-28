@@ -19,6 +19,9 @@ public interface IOvertimePolicyRepository extends JpaRepository<OvertimePolicy,
     // Fetch all policies available in a specific country
     List<OvertimePolicy> findByCountry(String country);
 
+    // Fetch all policies available in a specific state
+    List<OvertimePolicy> findByState(String state);
+
     // Check if a policy name already exists in a given state (Useful for validation when creating a new one)
     boolean existsByCountryAndStateAndName(String country, String state, String name);
 }
